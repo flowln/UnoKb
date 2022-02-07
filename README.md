@@ -1,5 +1,7 @@
 # UnoKb - Ayy another macro keyboard 
 This is a simple macro keyboard made to work with an Arduino Uno board without firmware modification. The board communicates with a Python program on the computer side via the serial port. Currently it only works on Linux!
+My board:
+![My board setup](my_setup.png)
 
 ## Dependencies
 For the arduino side, if you want LCD support (enabled by default), you'll need [LiquidDisplay](https://www.arduino.cc/en/Reference/LiquidCrystal). You can install it via the Library Manager in Arduino IDE, or via arduino-cli with `arduino-cli update && arduino-cli lib install LiquidCrystal`.
