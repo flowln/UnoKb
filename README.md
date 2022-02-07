@@ -1,10 +1,12 @@
 # UnoKb - Ayy another macro keyboard 
 This is a simple macro keyboard made to work with an Arduino Uno board without firmware modification. The board communicates with a Python program on the computer side via the serial port. Currently it only works on Linux!
-My board:
+
+My board (made in [TinkerCad](https://www.tinkercad.com)):
 ![My board setup](my_setup.png)
 
 ## Dependencies
 For the arduino side, if you want LCD support (enabled by default), you'll need [LiquidDisplay](https://www.arduino.cc/en/Reference/LiquidCrystal). You can install it via the Library Manager in Arduino IDE, or via arduino-cli with `arduino-cli update && arduino-cli lib install LiquidCrystal`.
+
 On the Python side, you'll need Python 3.x with the following external modules:
 - [pyserial](https://pypi.org/project/pyserial/)
 - [python-daemon](https://pypi.org/project/python-daemon/) 
@@ -18,11 +20,14 @@ There are four files on this repository:
 
 ## How to use
 Firstly, you should take a look at both the .ino and .py files, and adjust them to your preferences. Probably the most important things to take note are the pin numbers in the .ino file, and the macros / modes in the .py file.
+
 Once this is done, install the sketch with your preferred tool (if on Linux, the `install_arduino.sh` script should work if you have arduino-cli installed on your machine). 
+
 Finally, you (should) be able to start the Python program, which will spawn a daemon process that communicates with the board on the background. To stop the daemon, just run the python program again.
 
 ## Debugging
 To debug problems on the board, make sure the python program is not running, and use the monitor (either via arduino-cli or via the Arduino IDE interface) to see what's going on in the serial port. There's also a debug setting in the .ino file, which prints some more debug info to the port. 
+
 For the Python side, make sure the `stdout` and `stderr` lines at the end of the file are uncommented, as they can provide valuable information about what's going wrong.
 
 ## TODO:
