@@ -13,6 +13,47 @@ import subprocess
 import signal
 import time
 
+# Allows running multiple scripts/commands with a single mode
+# Eg.: [['echo', 'a'], ['echo', 'b']] -> echo "a" && echo "b"
+# Passing in a single command array as 'commands' also work
+def runMacro(actions, new_session=True):
+    if isinstance(actions, ToggleableAction):
+        actions.toggle()
+        return
+
+    if isinstance(actions, str) or isinstance(actions[0], str):
+        return subprocess.Popen(actions, shell=False, start_new_session=new_session)
+
+    for command in actions:
+        subprocess.Popen(command, shell=False, start_new_session=new_session)
+
+# Only accepts single string command (in order to create only one Popen object)
+class ToggleableAction:
+    def __init__(self, command: str, initial_state = None, fallback_kill_command = None):
+        self.command = command
+
+        if initial_state is None:
+            self.state = False
+        else:
+            self.state = runMacro(initial_state, False).returncode == 0
+        self.init_state = self.state
+
+        self.kill = fallback_kill_command
+        self.proc = None
+
+    def toggle(self):
+        if self.state is False:
+            self.proc = runMacro(self.command)
+            self.state = True
+        else:
+            if self.proc is None and self.kill is not None:
+                runMacro(self.kill)
+            else:
+                self.proc.terminate()
+            
+            self.state = False
+
+
 # Path to PID of running daemon
 pid_path = '/var/run/user/1001/unokb.pid'
 
@@ -46,12 +87,16 @@ macros = {
     'VolUp':    ['pactl', 'set-sink-volume', '@DEFAULT_SINK@', '+10%'],
     'VolDown':  ['pactl', 'set-sink-volume', '@DEFAULT_SINK@', '-10%'],
     'StartMic': '/home/low/Documents/scripts/mic_start_script.sh',
-    'StopMic':  '/home/low/Documents/scripts/mic_kill.sh'
+    'StopMic':  '/home/low/Documents/scripts/mic_kill.sh',
+    'Mic':      ToggleableAction('/home/low/Documents/scripts/mic_start_script.sh',
+                                 '/home/low/Documents/scripts/mic_check.sh',
+                                 '/home/low/Documents/scripts/mic_kill.sh'),
+    'Reverb':   ToggleableAction('/home/low/Documents/scripts/mic/reverb.sh')
 }
 
 # Available modes for usage
 #         button 1  button 2   button 3    button 4
-modes = [['Mute'  , 'Deafen' , 'VolUp'   , 'VolDown'],
+modes = [['Mic'  , 'Reverb' , 'VolUp'   , 'VolDown'],
          ['Mute'  , 'Deafen' , 'StartMic', 'StopMic'],
          ['VolUp' , 'VolDown', 'StartMic', 'StopMic']]
 
@@ -61,16 +106,6 @@ binary_command = re.compile(r"b'(.*)'", re.IGNORECASE)
 
 # Parses the original command into its parts ({command}={pin number})
 parse_command = re.compile(r"(.*)=([0-9+-]*)", re.IGNORECASE)
-
-# Allows running multiple scripts/commands with a single mode
-# Eg.: [['echo', 'a'], ['echo', 'b']] -> echo "a" && echo "b"
-# Passing in a single command array as 'commands' also work
-def runMacro(commands : list):
-    if isinstance(commands, str) or isinstance(commands[0], str):
-        return subprocess.Popen(commands, shell=False, start_new_session=True)
-        
-    for command in commands:
-        subprocess.Popen(command, shell=False, start_new_session=True)
 
 # Parses a command received via the serial port
 def receiveCommand(com_channel : serial.Serial):
@@ -142,6 +177,11 @@ def main():
             os.kill(os.getpid(), signal.SIGTERM)
 
 def shutdown(signum, frame):
+    for action in macros.items():
+        true_act = action[1]
+        if isinstance(true_act, ToggleableAction):
+            if true_act.state != true_act.init_state:
+                true_act.toggle()
     try:
         if com_channel.is_open:
             com_channel.write(bytes('host_disconnect\0\n', 'ascii'))
